@@ -41,7 +41,8 @@ class GatingAlgorithm:
             histogram: 理想泊松直方图（每个仓的独立泊松计数）
         """
         expected_counts = self.flux * num_cycles
-        return np.random.poisson(expected_counts)
+        Pi = np.random.poisson(expected_counts)
+        return Pi
 
     def calculate_detection_probability(self):
         """
@@ -127,5 +128,3 @@ class GatingAlgorithm:
         
         plt.tight_layout()
         plt.show()
-
-    # plot_sync_results(ideal_hist, sync_hist, Pi)

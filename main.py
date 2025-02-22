@@ -7,7 +7,7 @@ if __name__ == "__main__":
     num_bins = 100
     pulse_pos = 40
     pulse_width = 3
-    signal_strength = 0.1
+    signal_strength = 0.6
     bg_strength = 0.03
     num_cycles = 5000
     
