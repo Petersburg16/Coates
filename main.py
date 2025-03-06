@@ -1,5 +1,11 @@
 import src.GatingAlgo as ga
 
+
+
+import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['Heiti TC', 'Arial']  # 中文使用黑体，英文使用Arial
+plt.rcParams['font.family'] = ['sans-serif']  # 优先使用无衬线字体
+plt.rcParams['axes.unicode_minus'] = False
 # 主程序
 if __name__ == "__main__":
 
@@ -26,4 +32,5 @@ if __name__ == "__main__":
     Pi = gating_algo.calculate_detection_probability()
     
     # 修改绘图调用
-    gating_algo.plot_sync_results(ideal_hist, sync_hist, Pi)
+    # gating_algo.plot_sync_results(ideal_hist, sync_hist, Pi)
+    gating_algo.plot_hist(ideal_hist, sync_hist)
