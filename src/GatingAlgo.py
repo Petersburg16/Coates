@@ -56,10 +56,17 @@ class GatingAlgorithm:
         self._simulated_histogram = histogram
     def update_simulated_ideal_histogram(self):
         """
-        模拟理想泊松累积（无堆积效应）
+        模拟理想泊松累积（无堆积效应），并归一化以确保总次数为_cycles
         """
         expected_counts = self._flux * self._cycles
-        self._ideal_histogram = np.random.poisson(expected_counts)
+        raw_histogram = np.random.poisson(expected_counts)
+        total_counts = np.sum(raw_histogram)
+        
+        if total_counts > 0:
+            self._ideal_histogram = (raw_histogram / total_counts) * self._cycles
+            self._ideal_histogram = np.round(self._ideal_histogram).astype(int)
+        else:
+            self._ideal_histogram = raw_histogram
 
         
     def generate_flux(self):
@@ -90,52 +97,7 @@ class GatingAlgorithm:
         self.update_simulated_histogram()
         return self._simulated_histogram
 
-    def plot_sync_results(self):
-        """可视化结果（新增Pi曲线）"""
-        plt.figure(figsize=(12, 12))
-        
-        # 新增子图位置 1: 检测概率曲线
-        plt.subplot(5, 1, 1)
-        plt.plot(self._detection_probabilities, 'm-', linewidth=2)
-        plt.title('Photon Detection Probability $P_i = 1 - e^{-r_i}$')
-        plt.xlabel('Time Bin')
-        plt.ylabel('Probability')
-        plt.grid(True)
-        
-        # 调整原有子图位置
-        # 原始光场（位置2）
-        plt.subplot(5, 1, 2)
-        plt.plot(self._flux, 'b-', label='True Flux')
-        plt.title('True Photon Flux (Signal + Background)')
-        plt.xlabel('Time Bin')
-        plt.ylabel('Photon Rate')
-        plt.grid(True)
-        
-        # 理想泊松直方图（位置3）
-        plt.subplot(5, 1, 3)
-        plt.bar(range(len(self._ideal_histogram)), self._ideal_histogram, color='g', alpha=0.7)
-        plt.title('Ideal Poisson Accumulation (No Pile-up)')
-        plt.xlabel('Time Bin')
-        plt.ylabel('Photon Counts')
-        plt.grid(True)
-        
-        # 同步SPAD检测直方图（位置4）
-        plt.subplot(5, 1, 4)
-        plt.bar(range(len(self._simulated_histogram)-1), self._simulated_histogram[:-1], color='r', alpha=0.7)
-        plt.title('Sync SPAD Detection (Main Bins)')
-        plt.xlabel('Time Bin')
-        plt.ylabel('Photon Counts')
-        plt.grid(True)
-        
-        # 溢出仓（位置5）
-        plt.subplot(5, 1, 5)
-        plt.bar(['Overflow'], [self._simulated_histogram[-1]], color='purple', alpha=0.7)
-        plt.title('Overflow Bin (No Photon Detected)')
-        plt.ylabel('Cycle Counts')
-        plt.grid(True)
-        
-        plt.tight_layout()
-        plt.show()
+    
     def plot_hist_plotly(self):
         fig = go.Figure()
 
@@ -186,25 +148,3 @@ class GatingAlgorithm:
         
         
         
-    def plot_hist(self):
-        plt.figure(figsize=(6, 4))
-        # 理想泊松直方图
-        plt.subplot(2, 1, 1)
-        plt.bar(range(len(self._ideal_histogram)), self._ideal_histogram, color='#1f77b4', alpha=0.7)
-        plt.title("理想泊松累积直方图(无堆积效应)")
-        plt.xlabel('时间仓')
-        plt.ylabel('光子计数')
-        plt.grid(True)
-        
-        # 同步SPAD检测直方图
-        plt.subplot(2, 1, 2) 
-        plt.bar(range(len(self._simulated_histogram)-1), self._simulated_histogram[:-1], color='#ff7f0e', alpha=0.7)
-        plt.title('同步SPAD探测直方图')
-        plt.xlabel('时间仓')
-        plt.ylabel('光子计数')
-        plt.grid(True)
-        
-        plt.tight_layout()
-        plt.show()
-        
-
