@@ -1,13 +1,9 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']
 
-class GatingAlgorithm:
-    def __init__(self, num_bins=100, pulse_pos=50, pulse_width=5, signal_strength=0.5, bg_strength=0.1, cycles=1000):
+class SPADSimulateEngine:
+    def __init__(self, num_bins=100, signal_strength=0.5, bg_strength=0.1, cycles=1000):
         self._num_bins = num_bins
-        self._pulse_pos = pulse_pos
-        self._pulse_width = pulse_width
         self._signal_strength = signal_strength
         self._bg_strength = bg_strength
         self._cycles = cycles
@@ -16,16 +12,12 @@ class GatingAlgorithm:
         self.update_simulated_ideal_histogram()
         self.update_detection_probabilities()
         self.update_simulated_histogram()
-        
 
     def update_flux(self):
         """
-        生成光场光通量（脉冲信号 + 均匀背景）
+        生成光场光通量（需要在子类中实现）
         """
-        x = np.arange(self._num_bins)
-        pulse = self._signal_strength * np.exp(-0.5 * ((x - self._pulse_pos) / self._pulse_width)**2)
-        background = self._bg_strength * np.ones(self._num_bins)
-        self._flux = pulse + background
+        raise NotImplementedError("Subclasses should implement this method")
 
     def update_detection_probabilities(self):
         """
@@ -54,6 +46,7 @@ class GatingAlgorithm:
                 histogram[-1] += 1  # 未检测到光子，记录溢出仓
         
         self._simulated_histogram = histogram
+
     def update_simulated_ideal_histogram(self):
         """
         模拟理想泊松累积（无堆积效应），并归一化以确保总次数为_cycles
@@ -68,10 +61,9 @@ class GatingAlgorithm:
         else:
             self._ideal_histogram = raw_histogram
 
-        
     def generate_flux(self):
         """
-        生成光场光通量（脉冲信号 + 均匀背景）
+        生成光场光通量（需要在子类中实现）
         """
         self.update_flux()
         return self._flux
@@ -97,7 +89,6 @@ class GatingAlgorithm:
         self.update_simulated_histogram()
         return self._simulated_histogram
 
-    
     def plot_hist_plotly(self):
         fig = go.Figure()
 
@@ -143,8 +134,19 @@ class GatingAlgorithm:
                 borderwidth=1
             )
         )
-
         fig.show()
-        
-        
-        
+
+class SingleGaussian(SPADSimulateEngine):
+    def __init__(self, num_bins=100, pulse_pos=50, pulse_width=5, signal_strength=0.5, bg_strength=0.1, cycles=1000):
+        self._pulse_pos = pulse_pos
+        self._pulse_width = pulse_width
+        super().__init__(num_bins, signal_strength, bg_strength, cycles)
+
+    def update_flux(self):
+        """
+        生成光场光通量（单高斯脉冲信号 + 均匀背景）
+        """
+        x = np.arange(self._num_bins)
+        pulse = self._signal_strength * np.exp(-0.5 * ((x - self._pulse_pos) / self._pulse_width)**2)
+        background = self._bg_strength * np.ones(self._num_bins)
+        self._flux = pulse + background
