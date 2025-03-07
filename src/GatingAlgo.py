@@ -150,3 +150,21 @@ class SingleGaussian(SPADSimulateEngine):
         pulse = self._signal_strength * np.exp(-0.5 * ((x - self._pulse_pos) / self._pulse_width)**2)
         background = self._bg_strength * np.ones(self._num_bins)
         self._flux = pulse + background
+        
+class DoubleGaussian(SPADSimulateEngine):
+    def __init__(self, num_bins=100, pulse_pos1=40, pulse_pos2=70, pulse_width1=5, pulse_width2=5, signal_strength=0.5, bg_strength=0.1, cycles=1000):
+        self._pulse_pos1 = pulse_pos1
+        self._pulse_pos2 = pulse_pos2
+        self._pulse_width1 = pulse_width1
+        self._pulse_width2 = pulse_width2
+        super().__init__(num_bins, signal_strength, bg_strength, cycles)
+
+    def update_flux(self):
+        """
+        生成光场光通量（双高斯脉冲信号 + 均匀背景）
+        """
+        x = np.arange(self._num_bins)
+        pulse1 = self._signal_strength * np.exp(-0.5 * ((x - self._pulse_pos1) / self._pulse_width1)**2)
+        pulse2 = self._signal_strength * np.exp(-0.5 * ((x - self._pulse_pos2) / self._pulse_width2)**2)
+        background = self._bg_strength * np.ones(self._num_bins)
+        self._flux = pulse1 + pulse2 + background
