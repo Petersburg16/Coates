@@ -3,10 +3,9 @@ from scipy.special import log1p
 import plotly.graph_objects as go
 
 class SPADSimulateEngine:
-    def __init__(self, num_bins=100, signal_strength=0.5, bg_strength=0.1, cycles=1000):
+    def __init__(self, num_bins=100, cycles=1000):
         self._num_bins = num_bins
-        self._signal_strength = signal_strength
-        self._bg_strength = bg_strength
+
         self._cycles = cycles
 
         self.update_flux()
@@ -129,6 +128,14 @@ class SPADSimulateEngine:
             marker_color='#1f77b4'
         ))
 
+        # Coates估计直方图
+        fig.add_trace(go.Bar(
+            x=list(range(len(self._coates_estimation))),
+            y=self._coates_estimation,
+            name='Coates Estimation Histogram',
+            marker_color='#2ca02c'
+        ))
+
         # 同步SPAD检测直方图
         fig.add_trace(go.Bar(
             x=list(range(len(self._simulated_histogram)-1)),
@@ -160,45 +167,10 @@ class SPADSimulateEngine:
                 yanchor='top',
                 bgcolor='rgba(255,255,255,0.5)',
                 bordercolor='rgba(0,0,0,0.5)',
-                borderwidth=1
-            )
-        )
-        fig.show()
-        
-    def plot_coates_estimation(self):
-        fig = go.Figure()
-        # Coates估计直方图
-        fig.add_trace(go.Bar(
-            x=list(range(len(self._coates_estimation))),
-            y=self._coates_estimation,
-            name='Coates Estimation Histogram',
-            marker_color='#2ca02c'
-        ))
-
-        fig.update_layout(
-            title='Coates Estimation Histogram',
-            xaxis_title='Time Bin',
-            yaxis_title='Photon Counts',
-            barmode='group',
-            legend_title_text='Histogram Type',
-            font=dict(
-                family="Arial, sans-serif",
-                size=18,
-                color="Black"
-            ),
-            title_font=dict(
-                family="Arial, sans-serif",
-                size=22,
-                color="Black"
-            ),
-            legend=dict(
-                x=0.99,
-                y=0.99,
-                xanchor='right',
-                yanchor='top',
-                bgcolor='rgba(255,255,255,0.5)',
-                bordercolor='rgba(0,0,0,0.5)',
-                borderwidth=1
+                borderwidth=1,
+                font=dict(
+                    size=12  # 调整图例的字号
+                )
             )
         )
         fig.show()
@@ -255,7 +227,9 @@ class SingleGaussian(SPADSimulateEngine):
     def __init__(self, num_bins=100, pulse_pos=50, pulse_width=5, signal_strength=0.5, bg_strength=0.1, cycles=1000):
         self._pulse_pos = pulse_pos
         self._pulse_width = pulse_width
-        super().__init__(num_bins, signal_strength, bg_strength, cycles)
+        self._signal_strength = signal_strength
+        self._bg_strength = bg_strength
+        super().__init__(num_bins, cycles)
 
     def update_flux(self):
         """
@@ -267,19 +241,22 @@ class SingleGaussian(SPADSimulateEngine):
         self._flux = pulse + background
         
 class DoubleGaussian(SPADSimulateEngine):
-    def __init__(self, num_bins=100, pulse_pos1=40, pulse_pos2=70, pulse_width1=5, pulse_width2=5, signal_strength=0.5, bg_strength=0.1, cycles=1000):
+    def __init__(self, num_bins=100, pulse_pos1=40, pulse_pos2=70, pulse_width1=5, pulse_width2=5, signal_strength1=0.5, signal_strength2=0.5, bg_strength=0.1, cycles=1000):
         self._pulse_pos1 = pulse_pos1
         self._pulse_pos2 = pulse_pos2
         self._pulse_width1 = pulse_width1
         self._pulse_width2 = pulse_width2
-        super().__init__(num_bins, signal_strength, bg_strength, cycles)
+        self._signal_strength1 = signal_strength1
+        self._signal_strength2 = signal_strength2
+        self._bg_strength = bg_strength
+        super().__init__(num_bins, cycles)
 
     def update_flux(self):
         """
         生成光场光通量（双高斯脉冲信号 + 均匀背景）
         """
         x = np.arange(self._num_bins)
-        pulse1 = self._signal_strength * np.exp(-0.5 * ((x - self._pulse_pos1) / self._pulse_width1)**2)
-        pulse2 = self._signal_strength * np.exp(-0.5 * ((x - self._pulse_pos2) / self._pulse_width2)**2)
+        pulse1 = self._signal_strength1 * np.exp(-0.5 * ((x - self._pulse_pos1) / self._pulse_width1)**2)
+        pulse2 = self._signal_strength2 * np.exp(-0.5 * ((x - self._pulse_pos2) / self._pulse_width2)**2)
         background = self._bg_strength * np.ones(self._num_bins)
         self._flux = pulse1 + pulse2 + background
