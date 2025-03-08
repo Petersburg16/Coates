@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import log1p
 import plotly.graph_objects as go
 
 class SPADSimulateEngine:
@@ -12,6 +13,7 @@ class SPADSimulateEngine:
         self.update_simulated_ideal_histogram()
         self.update_detection_probabilities()
         self.update_simulated_histogram()
+        self.update_coates_estimation()
 
     def update_flux(self):
         """
@@ -46,6 +48,23 @@ class SPADSimulateEngine:
                 histogram[-1] += 1  # 未检测到光子，记录溢出仓
         
         self._simulated_histogram = histogram
+    def update_coates_estimation(self):
+        """
+        使用Coates估计器还原真实光通量，并生成相应的直方图
+        """
+        coates_flux = self.coates_estimator(self._simulated_histogram)
+        expected_counts = coates_flux * self._cycles
+        expected_counts = np.clip(expected_counts, 0, None)  # 确保值非负
+
+        raw_histogram = np.random.poisson(expected_counts)
+        total_counts = np.sum(raw_histogram)
+        
+        if total_counts > 0:
+            self._coates_estimation = (raw_histogram / total_counts) * self._cycles
+            self._coates_estimation = np.round(self._coates_estimation).astype(int)
+        else:
+            self._coates_estimation = raw_histogram
+
 
     def update_simulated_ideal_histogram(self):
         """
@@ -88,7 +107,13 @@ class SPADSimulateEngine:
         """
         self.update_simulated_histogram()
         return self._simulated_histogram
-
+    def coates_estimation(self):
+        """
+        模拟SPAD检测（包含堆积效应）
+        """
+        self.update_coates_estimation()
+        return self._coates_estimation
+    
     def plot_hist_plotly(self):
         fig = go.Figure()
 
@@ -135,7 +160,53 @@ class SPADSimulateEngine:
             )
         )
         fig.show()
+        
 
+    @staticmethod 
+    def safe_log(x):
+        """数值稳定的对数计算 -ln(1-x)"""
+        if x >= 1.0:
+            return np.inf  # 处理无穷大
+        elif x < 1e-15:    # 小值时泰勒展开
+            return x + x**2/2 + x**3/3 + x**4/4
+        else:
+            return -log1p(-x)  # 等价于 -ln(1-x) 的稳定计算
+
+    @staticmethod
+    def coates_estimator(histogram):
+        """
+        Coates估计器的数值稳定实现
+        注意输入的光子直方图histogram的长度是B+1，最后一个是溢出仓
+        """
+        safe_log_vec = np.vectorize(SPADSimulateEngine.safe_log, otypes=[np.longdouble])
+        
+        # 转换输入参数为高精度类型
+        N_i = histogram[:-1].astype(np.longdouble)
+        total_counts = np.sum(histogram).astype(np.longdouble)
+        
+        """
+        if histogram[-1] == 0:
+            total_counts += 1  # 防止除零错误
+        """
+        
+        # 计算分母序列
+        cumulative_loss = np.zeros_like(N_i, dtype=np.longdouble)
+        denominator = np.zeros_like(N_i, dtype=np.longdouble)
+        denominator[0] = total_counts
+        
+        for i in range(1, len(N_i)):
+            cumulative_loss[i] = cumulative_loss[i-1] + N_i[i-1]
+            denominator[i] = total_counts - cumulative_loss[i]
+        
+        # 处理分母非正值
+        denominator = np.maximum(denominator, 1e-15)
+        P = np.divide(N_i, denominator, where=~np.isnan(denominator), out=np.full_like(denominator, np.nan))
+        S = safe_log_vec(P)
+        valid_S = S[~np.isnan(S) & (S >= 0)]
+        return valid_S
+        
+        
+ 
 class SingleGaussian(SPADSimulateEngine):
     def __init__(self, num_bins=100, pulse_pos=50, pulse_width=5, signal_strength=0.5, bg_strength=0.1, cycles=1000):
         self._pulse_pos = pulse_pos
