@@ -13,7 +13,7 @@ def main():
     gating_algo = ga.SingleGaussian(num_bins, pulse_pos, pulse_width, signal_strength, bg_strength, num_cycles)
     
     # 绘图
-    gating_algo.plot_hist_plotly()
+    gating_algo.plot_coates_estimation()
 
     # DoubleGaussian参数设置
     num_bins = 100
@@ -29,7 +29,7 @@ def main():
     gating_algo_double = ga.DoubleGaussian(num_bins, pulse_pos1, pulse_pos2, pulse_width1, pulse_width2, signal_strength, bg_strength, num_cycles)
     
     # 绘图
-    gating_algo_double.plot_hist_plotly()
+    gating_algo_double.plot_coates_estimation()
 
 if __name__ == '__main__':
     main()

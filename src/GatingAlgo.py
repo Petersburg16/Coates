@@ -50,12 +50,16 @@ class SPADSimulateEngine:
         self._simulated_histogram = histogram
     def update_coates_estimation(self):
         """
-        使用Coates估计器还原真实光通量，并生成相应的直方图
+        使用Coates估计器生成光子直方图
         """
         coates_flux = self.coates_estimator(self._simulated_histogram)
         expected_counts = coates_flux * self._cycles
-        expected_counts = np.clip(expected_counts, 0, None)  # 确保值非负
-
+        
+        # 将inf值替换为其他值中的最大值
+        if np.isinf(expected_counts).any():
+            max_value = np.max(expected_counts[np.isfinite(expected_counts)])
+            expected_counts = np.where(np.isinf(expected_counts), max_value, expected_counts)
+        
         raw_histogram = np.random.poisson(expected_counts)
         total_counts = np.sum(raw_histogram)
         
@@ -161,7 +165,47 @@ class SPADSimulateEngine:
         )
         fig.show()
         
+    def plot_coates_estimation(self):
+        fig = go.Figure()
+        # Coates估计直方图
+        fig.add_trace(go.Bar(
+            x=list(range(len(self._coates_estimation))),
+            y=self._coates_estimation,
+            name='Coates Estimation Histogram',
+            marker_color='#2ca02c'
+        ))
 
+        fig.update_layout(
+            title='Coates Estimation Histogram',
+            xaxis_title='Time Bin',
+            yaxis_title='Photon Counts',
+            barmode='group',
+            legend_title_text='Histogram Type',
+            font=dict(
+                family="Arial, sans-serif",
+                size=18,
+                color="Black"
+            ),
+            title_font=dict(
+                family="Arial, sans-serif",
+                size=22,
+                color="Black"
+            ),
+            legend=dict(
+                x=0.99,
+                y=0.99,
+                xanchor='right',
+                yanchor='top',
+                bgcolor='rgba(255,255,255,0.5)',
+                bordercolor='rgba(0,0,0,0.5)',
+                borderwidth=1
+            )
+        )
+        fig.show()
+        
+        
+    # 这里开始是一个静态方法，数值稳定的Coates估计器实现，不需要实例化
+    # 可能后续会重构出来到一个单独的类中
     @staticmethod 
     def safe_log(x):
         """数值稳定的对数计算 -ln(1-x)"""
