@@ -13,13 +13,25 @@ class SPADSimulateEngine:
         self.update_detection_probabilities()
         self.update_simulated_histogram()
         self.update_coates_estimation()
-
+        self.update_normalized_flux()  # 添加新的归一化flux计算
+        
     def update_flux(self):
         """
         生成光场光通量（需要在子类中实现）
         """
         raise NotImplementedError("Subclasses should implement this method")
-
+    
+    def update_normalized_flux(self):
+        """
+        计算归一化后的光通量，使其总和与cycles相同
+        用于与MLE估计结果进行直接比较
+        """
+        total_flux = np.sum(self._flux)
+        if total_flux > 0:
+            self._normalized_flux = (self._flux / total_flux) 
+        else:
+            self._normalized_flux = np.zeros_like(self._flux)
+            
     def update_detection_probabilities(self):
         """
         计算每个bin的光子检测概率Pi = 1 - e^{-r_i}
@@ -223,40 +235,5 @@ class SPADSimulateEngine:
         
         
  
-class SingleGaussian(SPADSimulateEngine):
-    def __init__(self, num_bins=100, pulse_pos=50, pulse_width=5, signal_strength=0.5, bg_strength=0.1, cycles=1000):
-        self._pulse_pos = pulse_pos
-        self._pulse_width = pulse_width
-        self._signal_strength = signal_strength
-        self._bg_strength = bg_strength
-        super().__init__(num_bins, cycles)
 
-    def update_flux(self):
-        """
-        生成光场光通量（单高斯脉冲信号 + 均匀背景）
-        """
-        x = np.arange(self._num_bins)
-        pulse = self._signal_strength * np.exp(-0.5 * ((x - self._pulse_pos) / self._pulse_width)**2)
-        background = self._bg_strength * np.ones(self._num_bins)
-        self._flux = pulse + background
-        
-class DoubleGaussian(SPADSimulateEngine):
-    def __init__(self, num_bins=100, pulse_pos1=40, pulse_pos2=70, pulse_width1=5, pulse_width2=5, signal_strength1=0.5, signal_strength2=0.5, bg_strength=0.1, cycles=1000):
-        self._pulse_pos1 = pulse_pos1
-        self._pulse_pos2 = pulse_pos2
-        self._pulse_width1 = pulse_width1
-        self._pulse_width2 = pulse_width2
-        self._signal_strength1 = signal_strength1
-        self._signal_strength2 = signal_strength2
-        self._bg_strength = bg_strength
-        super().__init__(num_bins, cycles)
-
-    def update_flux(self):
-        """
-        生成光场光通量（双高斯脉冲信号 + 均匀背景）
-        """
-        x = np.arange(self._num_bins)
-        pulse1 = self._signal_strength1 * np.exp(-0.5 * ((x - self._pulse_pos1) / self._pulse_width1)**2)
-        pulse2 = self._signal_strength2 * np.exp(-0.5 * ((x - self._pulse_pos2) / self._pulse_width2)**2)
-        background = self._bg_strength * np.ones(self._num_bins)
-        self._flux = pulse1 + pulse2 + background
+    

@@ -12,8 +12,21 @@ def main():
     # 创建SingleGaussian实例
     gating_algo = ga.SingleGaussian(num_bins, pulse_pos, pulse_width, signal_strength, bg_strength, num_cycles)
     
-    # 绘图
+    # 使用MLE估计参数并打印结果
+    mle_params = gating_algo.estimate_parameters_mle()
+    print("原始参数:")
+    print(f"  脉冲位置: {pulse_pos}, 脉冲宽度: {pulse_width}")
+    print(f"  信号强度: {signal_strength}, 背景强度: {bg_strength}")
+    print("\nMLE估计参数:")
+    print(f"  脉冲位置: {mle_params['pulse_pos']:.2f}, 脉冲宽度: {mle_params['pulse_width']:.2f}")
+    print(f"  信号强度: {mle_params['signal_strength']:.2f}, 背景强度: {mle_params['bg_strength']:.2f}")
+    print(f"  优化成功: {mle_params['optimization_success']}")
+    
+    # 绘制原始直方图
     gating_algo.plot_hist_plotly()
+    
+    # 绘制MLE估计结果对比图
+    gating_algo.plot_mle_comparison()
 
     # DoubleGaussian参数设置
     num_bins = 100
