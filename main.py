@@ -27,7 +27,8 @@ def main():
     
     # 绘制MLE估计结果对比图
     gating_algo.plot_mle_comparison()
-
+    # 绘制原始直方图和MLE估计结果的合并图
+    gating_algo.plot_combined_hist_mle()
     # DoubleGaussian参数设置
     num_bins = 100
     pulse_pos1 = 40

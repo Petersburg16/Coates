@@ -39,7 +39,7 @@ class SingleGaussian(SPADSimulateEngine):
         # 定义参数约束 (参数顺序: [pulse_pos, pulse_width, signal_strength, bg_strength])
         bounds = [
             (0, self._num_bins - 1),      # pulse_pos 在时间窗口内
-            (0.1, self._num_bins / 5),    # pulse_width 合理范围
+            (0.1, self._num_bins ),    # pulse_width 合理范围
             (0.01, 5.0),                  # signal_strength 合理范围
             (0.001, 1.0)                  # bg_strength 合理范围
         ]
@@ -91,18 +91,11 @@ class SingleGaussian(SPADSimulateEngine):
             'optimization_message': result.message
         }
     def plot_mle_comparison(self):
-
-        
         # 获取MLE估计的参数
         mle_params = self.estimate_parameters_mle()
         
         # 生成x轴数据
         x = np.arange(self._num_bins)
-        
-        # 归一化原始光通量
-        original_pulse = self._signal_strength * np.exp(-0.5 * ((x - self._pulse_pos) / self._pulse_width)**2)
-        original_background = self._bg_strength * np.ones(self._num_bins)
-        original_flux_raw = original_pulse + original_background
         
         # 使用已计算的归一化flux
         original_flux_normalized = self._normalized_flux
@@ -114,6 +107,10 @@ class SingleGaussian(SPADSimulateEngine):
         # Coates估计的光通量
         coates_flux = self._coates_estimation / self._cycles
         
+        total_flux = np.sum(self._flux)
+        signal_strength_normalized= self._signal_strength / total_flux
+        bg_strength_normalized = self._bg_strength / total_flux
+        
         # 创建图表
         fig = go.Figure()
         
@@ -123,7 +120,7 @@ class SingleGaussian(SPADSimulateEngine):
             y=original_flux_normalized,
             mode='lines',
             name='Normalized Original Flux',
-            line=dict(color='blue', width=2)
+            line=dict(color='#1f77b4', width=3)
         ))
         
         # 添加MLE估计的光通量曲线
@@ -132,7 +129,7 @@ class SingleGaussian(SPADSimulateEngine):
             y=mle_flux,
             mode='lines',
             name='MLE Estimated Flux',
-            line=dict(color='red', width=2)
+            line=dict(color='#ff7f0e', width=3)
         ))
         
         # 添加Coates估计点
@@ -141,27 +138,43 @@ class SingleGaussian(SPADSimulateEngine):
             y=coates_flux,
             mode='markers',
             name='Coates Estimation',
-            marker=dict(color='green', size=5)
+            marker=dict(color='#2ca02c', size=8)
         ))
         
-        # 设置图表布局
+        # 设置图表布局 - 保持与父类一致的样式
         fig.update_layout(
-            title=f'Normalized Flux Comparison (MLE Success: {mle_params["optimization_success"]})',
+            title='Normalized Flux Comparison',
             xaxis_title='Time Bin',
             yaxis_title='Normalized Photon Flux',
-            legend_title='Flux Source',
             font=dict(
                 family="Arial, sans-serif",
-                size=14,
+                size=18,
                 color="Black"
+            ),
+            title_font=dict(
+                family="Arial, sans-serif",
+                size=22,
+                color="Black"
+            ),
+            legend=dict(
+                x=0.99,
+                y=0.99,
+                xanchor='right',
+                yanchor='top',
+                bgcolor='rgba(255,255,255,0.5)',
+                bordercolor='rgba(0,0,0,0.5)',
+                borderwidth=1,
+                font=dict(
+                    size=12
+                )
             )
         )
-    
-        # 添加参数信息到图表，显示归一化前的原始参数
+
+        # 添加参数信息到图表，显示归一化后的参数
         parameter_text = (
-            f"Original: pos={self._pulse_pos:.2f}, width={self._pulse_width:.2f}, "
-            f"strength={self._signal_strength:.2f}, bg={self._bg_strength:.2f}<br>"
-            f"MLE: pos={mle_params['pulse_pos']:.2f}, width={mle_params['pulse_width']:.2f}, "
+            f"Normalized Real Flux: pos={self._pulse_pos:.2f}, width={self._pulse_width:.2f}, "
+            f"strength={signal_strength_normalized:.2f}, bg={bg_strength_normalized:.2f}<br>"
+            f"MLE Estimated Flux: pos={mle_params['pulse_pos']:.2f}, width={mle_params['pulse_width']:.2f}, "
             f"strength={mle_params['signal_strength']:.2f}, bg={mle_params['bg_strength']:.2f}"
         )
         
@@ -170,10 +183,148 @@ class SingleGaussian(SPADSimulateEngine):
             x=0.01, y=0.98,
             text=parameter_text,
             showarrow=False,
-            font=dict(size=12),
-            bgcolor="rgba(255,255,255,0.8)",
+            font=dict(size=14),
+            bgcolor="rgba(255,255,255,0.7)",
             bordercolor="black",
-            borderwidth=1
+            borderwidth=1,
+            align="left"
         )
         
         fig.show()
+
+    def plot_combined_hist_mle(self):
+        """
+        绘制直方图和MLE估计结果的合并图
+        该方法仅适用于实现了estimate_parameters_mle方法的子类
+        """
+        if not hasattr(self, 'estimate_parameters_mle'):
+            print("此对象不支持MLE参数估计")
+            return self.plot_hist_plotly()
+        
+        # 创建图表
+        fig = go.Figure()
+        
+        # --- 添加直方图部分 ---
+        # 理想泊松直方图
+        fig.add_trace(go.Bar(
+            x=list(range(len(self._ideal_histogram))),
+            y=self._ideal_histogram,
+            name='Ideal Poisson Histogram',
+            marker_color='rgba(31, 119, 180, 1.0)',  # 移除透明度
+            opacity=1.0  # 设置不透明度为1
+        ))
+
+        # Coates估计直方图
+        fig.add_trace(go.Bar(
+            x=list(range(len(self._coates_estimation))),
+            y=self._coates_estimation,
+            name='Coates Estimation Histogram',
+            marker_color='rgba(44, 160, 44, 1.0)',  # 移除透明度
+            opacity=1.0  # 设置不透明度为1
+        ))
+
+        # 同步SPAD检测直方图
+        fig.add_trace(go.Bar(
+            x=list(range(len(self._simulated_histogram)-1)),
+            y=self._simulated_histogram[:-1],
+            name='SPAD Detection Histogram',
+            marker_color='rgba(255, 127, 14, 1.0)',  # 移除透明度
+            opacity=1.0  # 设置不透明度为1
+        ))
+        
+        # --- 添加MLE曲线部分 ---
+        # 获取MLE估计参数
+        mle_params = self.estimate_parameters_mle()
+        
+        # 生成x轴数据
+        x = np.arange(self._num_bins)
+        
+        # 归一化参数计算
+        total_flux = np.sum(self._flux)
+        if hasattr(self, '_signal_strength') and hasattr(self, '_bg_strength'):
+            signal_strength_normalized = self._signal_strength / total_flux * self._cycles
+            bg_strength_normalized = self._bg_strength / total_flux * self._cycles
+        
+            # 原始光通量曲线（与直方图对应刻度）
+            if hasattr(self, '_pulse_pos') and hasattr(self, '_pulse_width'):
+                original_pulse = signal_strength_normalized * np.exp(-0.5 * ((x - self._pulse_pos) / self._pulse_width)**2)
+                original_flux_scaled = original_pulse + bg_strength_normalized
+                
+                fig.add_trace(go.Scatter(
+                    x=x, 
+                    y=original_flux_scaled,
+                    mode='lines',
+                    name='Original Flux Model',
+                    line=dict(color='#4C72B0', width=3)  # 科研绘图深蓝色
+                ))
+        
+        # MLE估计的光通量曲线（与直方图对应刻度）
+        if 'signal_strength' in mle_params and 'bg_strength' in mle_params:
+            # 缩放MLE估计结果到直方图尺度
+            mle_signal_scaled = mle_params['signal_strength'] * self._cycles
+            mle_bg_scaled = mle_params['bg_strength'] * self._cycles
+            
+            if 'pulse_pos' in mle_params and 'pulse_width' in mle_params:
+                mle_pulse = mle_signal_scaled * np.exp(-0.5 * ((x - mle_params['pulse_pos']) / mle_params['pulse_width'])**2)
+                mle_flux_scaled = mle_pulse + mle_bg_scaled
+                
+                fig.add_trace(go.Scatter(
+                    x=x, 
+                    y=mle_flux_scaled,
+                    mode='lines',
+                    name='MLE Estimated Model',
+                    line=dict(color='#C44E52', width=3)  # 科研绘图红色
+                ))
+        
+        # 设置图表布局
+        fig.update_layout(
+            title='Photon Counting Histogram with MLE Model Estimation',
+            xaxis_title='Time Bin',
+            yaxis_title='Photon Counts',
+            barmode='group',
+            legend_title_text='Data Type',
+            font=dict(
+                family="Arial, sans-serif",
+                size=18,
+                color="Black"
+            ),
+            title_font=dict(
+                family="Arial, sans-serif",
+                size=22,
+                color="Black"
+            ),
+            legend=dict(
+                x=0.99,
+                y=0.99,
+                xanchor='right',
+                yanchor='top',
+                bgcolor='rgba(255,255,255,0.7)',
+                bordercolor='rgba(0,0,0,0.5)',
+                borderwidth=1,
+                font=dict(
+                    size=12
+                )
+            )
+        )
+        
+        # 如果是SingleGaussian类，添加参数信息到图表
+        if hasattr(self, '_pulse_pos') and hasattr(self, '_pulse_width'):
+            parameter_text = (
+                f"Original: pos={self._pulse_pos:.2f}, width={self._pulse_width:.2f}<br>"
+                f"MLE Estimated: pos={mle_params['pulse_pos']:.2f}, width={mle_params['pulse_width']:.2f}<br>"
+                f"MLE Success: {mle_params['optimization_success']}"
+            )
+            
+            fig.add_annotation(
+                xref="paper", yref="paper",
+                x=0.01, y=0.98,
+                text=parameter_text,
+                showarrow=False,
+                font=dict(size=14),
+                bgcolor="rgba(255,255,255,0.7)",
+                bordercolor="black",
+                borderwidth=1,
+                align="left"
+            )
+        
+        fig.show()    
