@@ -81,8 +81,8 @@ class SingleGaussian(SPADSimulateEngine):
         # 提取结果
         estimated_pos, estimated_width, estimated_strength, estimated_bg = result.x
         
-        # 返回估计的参数
-        return {
+        # 创建结果字典
+        mle_params = {
             'pulse_pos': estimated_pos,
             'pulse_width': estimated_width,
             'signal_strength': estimated_strength,
@@ -90,6 +90,18 @@ class SingleGaussian(SPADSimulateEngine):
             'optimization_success': result.success,
             'optimization_message': result.message
         }
+        
+        # 在返回前打印结果到终端
+        print("原始参数:")
+        print(f"  脉冲位置: {self._pulse_pos}, 脉冲宽度: {self._pulse_width}")
+        print(f"  信号强度: {self._signal_strength}, 背景强度: {self._bg_strength}")
+        print("\nMLE估计参数:")
+        print(f"  脉冲位置: {mle_params['pulse_pos']:.2f}, 脉冲宽度: {mle_params['pulse_width']:.2f}")
+        print(f"  信号强度: {mle_params['signal_strength']:.2f}, 背景强度: {mle_params['bg_strength']:.2f}")
+        print(f"  优化成功: {mle_params['optimization_success']}")
+        
+        # 返回估计的参数
+        return mle_params
     def plot_mle_comparison(self):
         # 获取MLE估计的参数
         mle_params = self.estimate_parameters_mle()
