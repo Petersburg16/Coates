@@ -102,10 +102,17 @@ class SingleGaussian(SPADSimulateEngine):
         
         # 返回估计的参数
         return mle_params
+    
+    def update_mle_params(self):
+        """
+        更新参数估计结果
+        """
+        self._mle_params = self.estimate_parameters_mle()
+        
     def plot_mle_comparison(self):
         # 获取MLE估计的参数
-        mle_params = self.estimate_parameters_mle()
-        
+        self.update_mle_params()
+        mle_params=self._mle_params
         # 生成x轴数据
         x = np.arange(self._num_bins)
         
@@ -209,9 +216,6 @@ class SingleGaussian(SPADSimulateEngine):
         绘制直方图和MLE估计结果的合并图
         该方法仅适用于实现了estimate_parameters_mle方法的子类
         """
-        if not hasattr(self, 'estimate_parameters_mle'):
-            print("此对象不支持MLE参数估计")
-            return self.plot_hist_plotly()
         
         # 创建图表
         fig = go.Figure()
@@ -245,8 +249,9 @@ class SingleGaussian(SPADSimulateEngine):
         ))
         
         # --- 添加MLE曲线部分 ---
-        # 获取MLE估计参数
-        mle_params = self.estimate_parameters_mle()
+        # 获取MLE估计的参数
+        self.update_mle_params()
+        mle_params=self._mle_params
         
         # 生成x轴数据
         x = np.arange(self._num_bins)

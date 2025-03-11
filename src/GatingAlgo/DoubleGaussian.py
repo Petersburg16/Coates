@@ -122,12 +122,19 @@ class DoubleGaussian(SPADSimulateEngine):
         # 返回估计的参数
         return mle_params
     
+    def update_mle_params(self):
+        """
+        更新参数估计结果
+        """
+        self._mle_params = self.estimate_parameters_mle()
+        
     def plot_mle_comparison(self):
         """
         绘制原始光通量、MLE估计和Coates估计的比较图
         """
         # 获取MLE估计的参数
-        mle_params = self.estimate_parameters_mle()
+        self.update_mle_params()
+        mle_params=self._mle_params
         
         # 生成x轴数据
         x = np.arange(self._num_bins)
@@ -267,9 +274,9 @@ class DoubleGaussian(SPADSimulateEngine):
             opacity=1.0
         ))
         
-        # --- 添加MLE曲线部分 ---
-        # 获取MLE估计参数
-        mle_params = self.estimate_parameters_mle()
+        # 获取MLE估计的参数
+        self.update_mle_params()
+        mle_params=self._mle_params
         
         # 生成x轴数据
         x = np.arange(self._num_bins)
