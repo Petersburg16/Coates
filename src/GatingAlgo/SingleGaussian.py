@@ -113,15 +113,19 @@ class SingleGaussian(SPADSimulateEngine):
         # 获取MLE估计的参数
         self.update_mle_params()
         mle_params=self._mle_params
-        # 生成x轴数据
-        x = np.arange(self._num_bins)
+        
+        # 生成原始x轴数据点
+        x_bins = np.arange(self._num_bins)
+        
+        # 创建高分辨率x轴数据用于平滑曲线
+        x_smooth = np.linspace(0, self._num_bins - 1, self._num_bins * 10)
         
         # 使用已计算的归一化flux
         original_flux_normalized = self._normalized_flux
         
-        # MLE估计的光通量
-        mle_pulse = mle_params['signal_strength'] * np.exp(-0.5 * ((x - mle_params['pulse_pos']) / mle_params['pulse_width'])**2)
-        mle_flux = mle_pulse + mle_params['bg_strength']
+        # MLE估计的光通量 (高分辨率)
+        mle_pulse_smooth = mle_params['signal_strength'] * np.exp(-0.5 * ((x_smooth - mle_params['pulse_pos']) / mle_params['pulse_width'])**2)
+        mle_flux_smooth = mle_pulse_smooth + mle_params['bg_strength']
         
         # Coates估计的光通量
         coates_flux = self._coates_estimation / self._cycles
@@ -130,22 +134,27 @@ class SingleGaussian(SPADSimulateEngine):
         signal_strength_normalized= self._signal_strength / total_flux
         bg_strength_normalized = self._bg_strength / total_flux
         
+        # 计算原始模型的高分辨率版本
+        original_pulse_smooth = self._signal_strength * np.exp(-0.5 * ((x_smooth - self._pulse_pos) / self._pulse_width)**2)
+        original_flux_smooth = original_pulse_smooth + self._bg_strength
+        original_flux_smooth_normalized = original_flux_smooth / np.sum(original_flux_smooth) * np.sum(self._normalized_flux)
+        
         # 创建图表
         fig = go.Figure()
         
-        # 添加归一化原始光通量曲线
+        # 添加归一化原始光通量曲线 (平滑版本)
         fig.add_trace(go.Scatter(
-            x=x, 
-            y=original_flux_normalized,
+            x=x_smooth, 
+            y=original_flux_smooth_normalized,
             mode='lines',
             name='Normalized Original Flux',
             line=dict(color='#1f77b4', width=3)
         ))
         
-        # 添加MLE估计的光通量曲线
+        # 添加MLE估计的光通量曲线 (平滑版本)
         fig.add_trace(go.Scatter(
-            x=x, 
-            y=mle_flux,
+            x=x_smooth, 
+            y=mle_flux_smooth,
             mode='lines',
             name='MLE Estimated Flux',
             line=dict(color='#ff7f0e', width=3)
@@ -153,7 +162,7 @@ class SingleGaussian(SPADSimulateEngine):
         
         # 添加Coates估计点
         fig.add_trace(go.Scatter(
-            x=x[:len(coates_flux)], 
+            x=x_bins[:len(coates_flux)], 
             y=coates_flux,
             mode='markers',
             name='Coates Estimation',
@@ -253,8 +262,11 @@ class SingleGaussian(SPADSimulateEngine):
         self.update_mle_params()
         mle_params=self._mle_params
         
-        # 生成x轴数据
-        x = np.arange(self._num_bins)
+        # 生成标准x轴数据
+        x_bins = np.arange(self._num_bins)
+        
+        # 生成高分辨率x轴数据用于平滑曲线
+        x_smooth = np.linspace(0, self._num_bins - 1, self._num_bins * 10)
         
         # 归一化参数计算
         total_flux = np.sum(self._flux)
@@ -262,32 +274,32 @@ class SingleGaussian(SPADSimulateEngine):
             signal_strength_normalized = self._signal_strength / total_flux * self._cycles
             bg_strength_normalized = self._bg_strength / total_flux * self._cycles
         
-            # 原始光通量曲线（与直方图对应刻度）
+            # 原始光通量曲线（平滑版本）
             if hasattr(self, '_pulse_pos') and hasattr(self, '_pulse_width'):
-                original_pulse = signal_strength_normalized * np.exp(-0.5 * ((x - self._pulse_pos) / self._pulse_width)**2)
-                original_flux_scaled = original_pulse + bg_strength_normalized
+                original_pulse_smooth = signal_strength_normalized * np.exp(-0.5 * ((x_smooth - self._pulse_pos) / self._pulse_width)**2)
+                original_flux_smooth = original_pulse_smooth + bg_strength_normalized
                 
                 fig.add_trace(go.Scatter(
-                    x=x, 
-                    y=original_flux_scaled,
+                    x=x_smooth, 
+                    y=original_flux_smooth,
                     mode='lines',
                     name='Original Flux Model',
                     line=dict(color='#4C72B0', width=3)  # 科研绘图深蓝色
                 ))
         
-        # MLE估计的光通量曲线（与直方图对应刻度）
+        # MLE估计的光通量曲线（平滑版本）
         if 'signal_strength' in mle_params and 'bg_strength' in mle_params:
             # 缩放MLE估计结果到直方图尺度
             mle_signal_scaled = mle_params['signal_strength'] * self._cycles
             mle_bg_scaled = mle_params['bg_strength'] * self._cycles
             
             if 'pulse_pos' in mle_params and 'pulse_width' in mle_params:
-                mle_pulse = mle_signal_scaled * np.exp(-0.5 * ((x - mle_params['pulse_pos']) / mle_params['pulse_width'])**2)
-                mle_flux_scaled = mle_pulse + mle_bg_scaled
+                mle_pulse_smooth = mle_signal_scaled * np.exp(-0.5 * ((x_smooth - mle_params['pulse_pos']) / mle_params['pulse_width'])**2)
+                mle_flux_smooth = mle_pulse_smooth + mle_bg_scaled
                 
                 fig.add_trace(go.Scatter(
-                    x=x, 
-                    y=mle_flux_scaled,
+                    x=x_smooth, 
+                    y=mle_flux_smooth,
                     mode='lines',
                     name='MLE Estimated Model',
                     line=dict(color='#C44E52', width=3)  # 科研绘图红色
@@ -344,4 +356,4 @@ class SingleGaussian(SPADSimulateEngine):
                 align="left"
             )
         
-        fig.show()    
+        fig.show()
