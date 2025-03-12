@@ -1,4 +1,4 @@
-import DataLoader
+from .DataLoader import DataLoader
 import numpy as np
 import plotly.graph_objs as go
 from ipywidgets import HBox, VBox

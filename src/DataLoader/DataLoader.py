@@ -1,7 +1,5 @@
 import numpy as np
 
-
-
 class DataLoader:
     def __init__(self,file_path,exposure=500,gate_info=(0,200)):
         self._file_path=file_path
