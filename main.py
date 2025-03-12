@@ -1,5 +1,4 @@
 import src.GatingAlgo as ga
-
 def main():
     # SingleGaussian参数设置
     num_bins = 100
