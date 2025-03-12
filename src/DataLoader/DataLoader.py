@@ -4,8 +4,8 @@ class DataLoader:
     def __init__(self,file_path,exposure=500,gate_info=(0,200)):
         self._file_path=file_path
         self._exposure=exposure
-        self._gate_info=(gate_info[0] + 15, gate_info[1] - 10)
-        
+        # self._gate_info=(gate_info[0] + 15, gate_info[1] - 10)
+        self._gate_info=(gate_info[0] , gate_info[1] - 10)
 
         self.load_data()
         self.update_strength_matrix()
@@ -47,7 +47,6 @@ class DataLoader:
     def update_strength_matrix(self):
         self._strength_matrix=self.get_strength_matrix()
         
-    
         
         
     def get_channel_data(self, x_idx, y_idx):
