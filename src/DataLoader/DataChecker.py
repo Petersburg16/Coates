@@ -207,46 +207,29 @@ class DataChecker(DataLoader):
         low, high = self._gate_info
         gate_length = high - low
         
-        # 蓝色 RGB 值
-        blue_r, blue_g, blue_b = 200, 0, 0
+        # 使用numpy的where找出所有非零强度的点的索引
+        # tensor_data形状为 [y, x, time]
+        non_zero_indices = np.where(self._tensor_data > 0)
         
-        # 非线性映射指数
-        nonlinear_power = 1.5
-        
-        # 计算所有强度值的最大值，用于归一化透明度
-        max_intensity = np.max(self._tensor_data)
-        if max_intensity <= 0:
-            max_intensity = 1
-        
-        # 使用numpy索引操作一次性获取所有非零点的坐标和强度
-        x, y, z, intensities = [], [], [], []
-        
-        for py in range(64):
-            for px in range(64):
-                hist_data = self._tensor_data[py, px, :]
-                
-                for t_idx in range(gate_length):
-                    if hist_data[t_idx] > 0:
-                        x.append(px)
-                        # 使用原始y坐标，不进行反转
-                        y.append(py)
-                        # 直接使用t_idx作为z坐标，不进行反转
-                        z.append(t_idx)
-                        intensities.append(hist_data[t_idx])
-        
-        # 转换为NumPy数组以便进行向量化操作
-        intensities = np.array(intensities)
+        # 提取坐标和强度值
+        y_coords = non_zero_indices[0]
+        x_coords = non_zero_indices[1]
+        time_idx = non_zero_indices[2]
+        intensities = self._tensor_data[non_zero_indices]
         
         # 计算透明度 - 使用非线性映射
+        max_intensity = np.max(intensities) if intensities.size > 0 else 1
         norm_intensities = intensities / max_intensity
-        alphas = np.minimum(0.001 + (norm_intensities**nonlinear_power) * 0.999, 1.0)*0.6
+        alphas = np.minimum(0.001 + (norm_intensities**1.5) * 0.999, 1.0) * 0.6
         
-        # 创建RGBA颜色数组
-        rgba_colors = [f'rgba({blue_r},{blue_g},{blue_b},{alpha})' for alpha in alphas]
+        # 创建RGBA颜色数组 - 蓝色 RGB: 200, 0, 0
+        rgba_colors = [f'rgba(200,0,0,{alpha})' for alpha in alphas]
         
         # 添加散点图
         fig.add_trace(go.Scatter3d(
-            x=x, y=y, z=z,
+            x=x_coords, 
+            y=y_coords, 
+            z=time_idx,
             mode='markers',
             marker=dict(
                 size=2,
@@ -277,10 +260,8 @@ class DataChecker(DataLoader):
             height=600, # 适当减小高度
             scene_camera=dict(
                 eye=dict(x=1.5, y=0.8, z=1.8),
-                # center=dict(x=0, y=0.2, z=4),
                 up=dict(x=0, y=1, z=0)
             ),
-            # margin=dict(l=40, r=20, b=60, t=40),  # 增加边距以提高可读性
             template="plotly_white",  # 使用白色背景模板更适合notebook
             autosize=True,  
         )
