@@ -6,7 +6,7 @@ from ..GatingAlgo.SPADSimulateEngine import SPADSimulateEngine
 
 # 创建Z轴范围滑块
 from ipywidgets import IntRangeSlider, VBox, Label, HBox
-            
+
 class DataChecker(DataLoader):
     def draw_strength(self, mode='original'):
         """
@@ -342,3 +342,4 @@ class DataChecker(DataLoader):
             # 返回包含图表和控件的布局
             controls = VBox([HBox([z_range_slider, z_range_label])])
             return VBox([fig, controls])
+
