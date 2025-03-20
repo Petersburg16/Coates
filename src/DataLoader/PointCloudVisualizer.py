@@ -87,7 +87,7 @@ class PointCloudVisualizer(DataLoader):
         """
         from jupyter_dash import JupyterDash
         app = self.render()
-        app.run(mode="inline", debug=True)
+        app.run(mode="inline", debug=True,port=8051)
 
 
     def draw_point_cloud_plotly(self):
