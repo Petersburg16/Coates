@@ -2,10 +2,10 @@ from .DataLoader import DataLoader
 import numpy as np
 import plotly.graph_objs as go
 from ipywidgets import HBox, VBox
-from ..GatingAlgo.SPADSimulateEngine import SPADSimulateEngine
+from ..GatingSimulator.SPADSimulateEngine import SPADSimulateEngine
 
 # 创建Z轴范围滑块
-from ipywidgets import IntRangeSlider, VBox, Label, HBox
+
 
 class DataChecker(DataLoader):
     def draw_strength(self, mode='original'):
@@ -185,6 +185,4 @@ class DataChecker(DataLoader):
                     )
                 )
             )
-
-
-   
+    

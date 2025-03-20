@@ -1,4 +1,4 @@
-import src.GatingAlgo as ga
+import src.GatingSimulator as ga
 def main():
     # SingleGaussian参数设置
     num_bins = 100

@@ -1,2 +1,2 @@
-from . import GatingAlgo
+from . import GatingSimulator
 from . import DataLoader
