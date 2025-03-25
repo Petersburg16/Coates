@@ -8,7 +8,6 @@ import plotly.graph_objs as go
 
 class DataChecker(DataLoader):
     def draw_strength(self, mode='original'):
-        # 提取需要的数据
         strength_matrix = self._strength_matrix
         exposure = self._exposure
         gate_info = self._gate_info

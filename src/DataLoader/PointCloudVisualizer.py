@@ -2,11 +2,12 @@ from .DataLoader import DataLoader
 from dash import Dash, html
 import dash_vtk
 from dash_vtk.utils import to_volume_state
+
 import numpy as np
 import vtk
 from vtkmodules.util import numpy_support
-from ipywidgets import IntRangeSlider, VBox, Label, HBox
-import plotly.graph_objs as go
+
+
 class PointCloudVisualizer(DataLoader):
 
     def normalize_tensor(self):
@@ -100,7 +101,10 @@ class PointCloudVisualizer(DataLoader):
             
             返回:
                 VBox: 包含点云图和Z轴范围控制滑块的垂直布局
+                
             """
+            from ipywidgets import IntRangeSlider, VBox, Label, HBox
+            import plotly.graph_objs as go
             # 创建图表
             fig = go.FigureWidget()
             
