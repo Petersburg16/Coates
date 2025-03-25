@@ -8,6 +8,7 @@ import vtk
 from vtkmodules.util import numpy_support
 
 
+
 class PointCloudVisualizer(DataLoader):
 
     def normalize_tensor(self):

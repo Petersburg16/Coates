@@ -2,7 +2,11 @@ import numpy as np
 import time
 class DataLoader:
     """
-    A class to load data from raw file and process it
+    A class to load data from raw file and process it.
+    
+    Imoprtant Properties:
+    _tensor_data: numpy.ndarray, the 3D tensor data of the raw file, where each pixel's histogram is stored in a 1D array(third dimension).
+    _strength_matrix: numpy.ndarray, the strength matrix of the data, which is a 64x64 matrix.
     """
     def __init__(self,file_path,exposure=500,gate_info=(0,200)):
         """
