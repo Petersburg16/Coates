@@ -10,60 +10,36 @@ from vtkmodules.util import numpy_support
 
 
 class PointCloudVisualizer(DataLoader):
-
-    def normalize_tensor(self):
+    def _to_vtk_volume(self):
         """
-        将张量数据归一化到 [0, 255] 范围，并生成透明度数组
+        To ensure _tensor_data can be rendered by Dash VTK, we need to convert it to a VTK volume state.
 
-        Returns:
-            numpy.ndarray: 归一化后的张量
+        Process: 
+        normalize the tensor data -> convert it to a VTK image data -> convert it to a volume state.
         """
+        normalized_tensor = self._normalize_tensor()
+        vtk_image_data = self._numpy_to_vtk_image_data(normalized_tensor)
+        volume_state = to_volume_state(vtk_image_data)
+        return volume_state
+    def _normalize_tensor(self):
         tensor = self._tensor_data
         tensor_min, tensor_max = tensor.min(), tensor.max()
         normalized_tensor = ((tensor - tensor_min) / (tensor_max - tensor_min) * 255).astype(np.uint8)
         return normalized_tensor
 
-    def numpy_to_vtk_image_data(self, numpy_array):
-        """
-        将 NumPy 数组转换为 VTK 的 vtkImageData 对象
-
-        参数:
-            numpy_array: numpy.ndarray, 形状为 (64, 64, depth)
-
-        Returns:
-            vtk.vtkImageData: VTK 图像数据对象
-        """
+    def _numpy_to_vtk_image_data(self, numpy_array):
         depth, height, width = numpy_array.shape
         vtk_data = numpy_support.numpy_to_vtk(num_array=numpy_array.ravel(), deep=True, array_type=vtk.VTK_UNSIGNED_CHAR)
-
         image_data = vtk.vtkImageData()
         image_data.SetDimensions(width, height, depth)
         image_data.GetPointData().SetScalars(vtk_data)
-
         return image_data
-
-    def to_vtk_volume(self):
-        """
-        将张量数据转换为适合 dash_vtk 的体渲染格式
-
-        Returns:
-            dict: dash_vtk.utils.to_volume_state 返回的体渲染状态
-        """
-        normalized_tensor = self.normalize_tensor()
-        vtk_image_data = self.numpy_to_vtk_image_data(normalized_tensor)
-        volume_state = to_volume_state(vtk_image_data)
-        return volume_state
 
     def render(self):
         """
-        使用 Dash 和 dash_vtk 渲染点云强度图
-
-        Returns:
-            Dash: Dash 应用实例
+        Create a Dash application to display the 3D volume rendering of the photon cloud.
         """
-        volume_state = self.to_vtk_volume()
-
-        # 创建 Dash 应用
+        volume_state = self._to_vtk_volume()
         app = Dash(__name__)
         app.layout = html.Div(
             style={"width": "100%", "height": "600px"},
@@ -80,16 +56,10 @@ class PointCloudVisualizer(DataLoader):
             ]
         )
         return app
-        
-   
 
     def show(self):
-        """
-        在 Jupyter Notebook 中显示 Dash 应用
-        """
-        from jupyter_dash import JupyterDash
         app = self.render()
-        app.run(mode="inline", debug=True,port=8051)
+        app.run(mode="inline", debug=True,port=8090)
 
 
     def draw_point_cloud_plotly(self):
@@ -250,3 +220,4 @@ class PointCloudVisualizer(DataLoader):
             # 返回包含图表和控件的布局
             controls = VBox([HBox([z_range_slider, z_range_label])])
             return VBox([fig, controls])
+

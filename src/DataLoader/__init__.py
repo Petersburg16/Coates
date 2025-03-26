@@ -1,5 +1,5 @@
 from .DataLoader import DataLoader
-from .DataChecker import DataChecker
+from .HistogramChecker import HistogramChecker
 from .PointCloudVisualizer import PointCloudVisualizer
 
-__all__ = ['DataLoader', 'DataChecker', 'PointCloudVisualizer']
+__all__ = ['DataLoader', 'HistogramChecker', 'PointCloudVisualizer']

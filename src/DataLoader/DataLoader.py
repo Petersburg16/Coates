@@ -1,5 +1,4 @@
 import numpy as np
-import time
 class DataLoader:
     """
     A class to load data from raw file and process it.
@@ -37,16 +36,14 @@ class DataLoader:
             with open(self._file_path, 'rb') as f:
                 raw_data = np.frombuffer(f.read(), dtype=np.uint16)
             if len(raw_data) % 4096 != 0:
-                raise ValueError("Data length is not divisible by 4096. Please check the file type or file integrity.")
+                raise ValueError("数据长度不能被4096整除，请检查文件类型或完整性")
             num_lines = len(raw_data) // 4096
             self._matrix_data = raw_data.reshape(num_lines, 4096).astype(float)
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Unable to open file: {self._file_path}. Please check if the file path is correct.")
-        except PermissionError:
-            raise PermissionError(f"No permission to read the file: {self._file_path}. Please check the file permissions.")
-        except IOError as e:
-            raise IOError(f"An error occurred while reading the file: {self._file_path}. Error message: {str(e)}")
-        
+        except Exception as e:
+            error_type = type(e).__name__
+            error_msg = str(e)
+            raise type(e)(f"{error_type}: {error_msg}")
+            
 
     def update_strength_matrix(self):
         self._strength_matrix=self.get_strength_matrix()
@@ -173,10 +170,8 @@ class DataLoader:
         return filtered, hist_counts, flux_value            
         
 def test():
-    import DataLoader as dl
-
     file_path = '/Users/ming/Documents/PythonCode/Coates/data/2025-01-17_15-09-54_Delay-0_Width-200.raw'
-    data_loader = dl.DataLoader(file_path, exposure=9600, gate_info=(0, 200))
+    data_loader = DataLoader(file_path, exposure=9600, gate_info=(0, 200))
 
 if __name__ == '__main__':
     test()

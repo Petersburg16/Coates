@@ -7,6 +7,12 @@ class SPADSimulateEngine:
         self._num_bins = num_bins
 
         self._cycles = cycles
+        
+        self._signal_strength = 0.5
+        self._pulse_pos = 34
+        self._pulse_width = 3
+        self._bg_strength = 0.04
+    
 
         self.update_flux()
         self.update_simulated_ideal_histogram()
@@ -19,7 +25,11 @@ class SPADSimulateEngine:
         """
         生成光场光通量（需要在子类中实现）
         """
-        raise NotImplementedError("Subclasses should implement this method")
+        x = np.arange(self._num_bins)
+        pulse = self._signal_strength * np.exp(-0.5 * ((x - self._pulse_pos) / self._pulse_width)**2)
+        background = self._bg_strength * np.ones(self._num_bins)
+        self._flux = pulse + background
+    
     
     def update_normalized_flux(self):
         """
@@ -185,7 +195,7 @@ class SPADSimulateEngine:
                 )
             )
         )
-        fig.show()
+        fig.show(renderer="browser")
         
         
     # 这里开始是一个静态方法，数值稳定的Coates估计器实现，不需要实例化
@@ -234,6 +244,11 @@ class SPADSimulateEngine:
         return valid_S
         
         
- 
+def test():
+    engine = SPADSimulateEngine(num_bins=100, cycles=1000)
+    engine.plot_hist_plotly()
+    
+if __name__ == "__main__":
+    test() 
 
     

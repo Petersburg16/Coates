@@ -7,12 +7,12 @@ import plotly.graph_objs as go
 
 
 from typing import Optional
-class DataChecker(DataLoader):
+class HistogramChecker(DataLoader):
     def draw_strength(self, mode='original'):
         """
-        绘制强度图和直方图，并启动交互式Dash应用
+        Create a Dash application to display the intensity image and histogram of the selected pixel.
+        The histogram can be displayed in three modes: original, Coates, and comparison.
         """
-        # 初始化数据
         strength_matrix = self._strength_matrix
         exposure = self._exposure
         gate_info = self._gate_info
@@ -20,25 +20,18 @@ class DataChecker(DataLoader):
         
         app = self._create_dash_app(strength_matrix, gate_info)
         self._setup_callbacks(app, gate_info, matrix_data, exposure)
-        app.run(jupyter_mode='inline', port=8050)
+        app.run(mode="inline",port=8060)
 
     def _create_dash_app(self, strength_matrix, gate_info):
-        """
-        创建并配置Dash应用
-        """
         app = dash.Dash(__name__)
-        
-        # 构建热图
         heatmap_fig = self._create_heatmap(strength_matrix, gate_info)
-        
-        # 应用布局
         app.layout = self.create_app_layout(heatmap_fig)
         
         return app
 
     def _create_heatmap(self, strength_matrix, gate_info):
         """
-        创建热图
+        Create a heatmap figure(gray) to display the intensity image.
         """
         heatmap_fig = go.Figure(
             data=[go.Heatmap(
@@ -51,19 +44,19 @@ class DataChecker(DataLoader):
         )
         
         heatmap_fig.update_layout(
-            title=f"强度图 - 延迟: {gate_info[0]}，门宽: {gate_info[1]-gate_info[0]}",
+            title=f"Intensity Image Gate Delay{gate_info[0]}，Gate Width: {gate_info[1]-gate_info[0]}",
             xaxis=dict(scaleanchor='y', scaleratio=1),
             yaxis=dict(autorange='reversed'),
             width=512,
             height=470,
             margin=dict(l=50, r=30, t=50, b=50)
         )
-        
         return heatmap_fig
 
     def _setup_callbacks(self, app, gate_info, matrix_data, exposure):
         """
-        设置应用回调函数
+        Set up callbacks for the Dash application.
+        When the heatmap is clicked, the histogram will be updated.
         """
         @app.callback(
             Output('histogram', 'figure'),
@@ -75,16 +68,13 @@ class DataChecker(DataLoader):
             if not click_data:
                 return dash.no_update
             
-            data_info = self.extract_pixel_data(click_data, gate_info, matrix_data, exposure)
-            fig = self.create_histogram(data_info, mode)
-            self.apply_layout(fig, data_info, mode, gate_info)
+            data_info = self._extract_pixel_data(click_data, gate_info, matrix_data, exposure)
+            fig = self._create_histogram(data_info, mode)
+            self._apply_layout(fig, data_info, mode, gate_info)
             
             return fig
 
-    def extract_pixel_data(self,click_data, gate_info, matrix_data, exposure):
-        """
-        解包回调函数中的点击数据，提取像素数据
-        """
+    def _extract_pixel_data(self,click_data, gate_info, matrix_data, exposure):
         x_idx = int(click_data['points'][0]['x'])
         y_idx = int(click_data['points'][0]['y'])
         index = y_idx * 64 + x_idx
@@ -108,15 +98,14 @@ class DataChecker(DataLoader):
             'coates_hist': coates_hist
         }
 
-    def create_histogram(self,data_info, mode) -> Optional[go.Figure]:
+    def _create_histogram(self,data_info, mode) -> Optional[go.Figure]:
         """
-        根据选择的模式交互创建直方图
+        Create a histogram figure based on the selected mode.
         """
         bins = data_info['bins']
         hist_counts = data_info['hist_counts']
         coates_hist = data_info['coates_hist']
 
-        # 定义模式对应的处理逻辑
         mode_handlers = {
             'original': lambda: go.Figure([go.Bar(
                 x=bins,
@@ -144,27 +133,21 @@ class DataChecker(DataLoader):
             ]).update_layout(barmode='group')
         }
 
-        # 根据模式调用对应的处理逻辑
         return mode_handlers.get(mode, lambda: go.Figure())()
 
-    def apply_layout(self,fig, data_info, mode, gate_info):
-        """
-        更新布局
-        """
+    def _apply_layout(self,fig, data_info, mode, gate_info):
         x_idx = data_info['x_idx']
         y_idx = data_info['y_idx']
         flux_value = data_info['flux_value']
         low, high = gate_info
         
-        # 根据模式设置标题
         if mode == 'original':
             title = f"像素({x_idx}, {y_idx})的直方图<br>光通量: {flux_value:.2f}%"
         elif mode == 'coates':
             title = f"Coates估计直方图<br>光通量: {flux_value:.2f}%"
         elif mode == 'compare':
             title = f"直方图对比<br>光通量: {flux_value:.2f}%"
-        
-        # 更新布局
+
         fig.update_layout(
             title=title,
             xaxis=dict(range=[low, high]),
@@ -184,7 +167,6 @@ class DataChecker(DataLoader):
 
            
     def create_app_layout(self,heatmap_fig):
-        """创建应用布局"""
         graph_style = {'flex': '1', 'margin': '0'}
         dropdown_style = {
             'width': '150px'
@@ -221,7 +203,7 @@ class DataChecker(DataLoader):
                                 {'label': 'Coates模式', 'value': 'coates'},
                                 {'label': '对比模式', 'value': 'compare'}
                             ],
-                            value='original',  # 默认值
+                            value='original',  # 默认选中原始模式
                             clearable=False,
                             style=dropdown_style
                         )
