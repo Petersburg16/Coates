@@ -3,6 +3,9 @@ from scipy.special import log1p
 import plotly.graph_objects as go
 
 class SPADSimulateEngine:
+    """ 
+    首先要考虑的是哪些变量是要最终显示的，要不要作为属性存储
+    """
     def __init__(self, num_bins=100, cycles=1000):
         self._num_bins = num_bins
 

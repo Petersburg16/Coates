@@ -25,7 +25,7 @@ class HistogramChecker(DataLoader):
     def _create_dash_app(self, strength_matrix, gate_info):
         app = dash.Dash(__name__)
         heatmap_fig = self._create_heatmap(strength_matrix, gate_info)
-        app.layout = self.create_app_layout(heatmap_fig)
+        app.layout = self._create_app_layout(heatmap_fig)
         
         return app
 
@@ -53,6 +53,52 @@ class HistogramChecker(DataLoader):
         )
         return heatmap_fig
 
+    def _create_app_layout(self,heatmap_fig):
+        graph_style = {'flex': '1', 'margin': '0'}
+        dropdown_style = {
+            'width': '150px'
+        }
+        dropdown_container_style = {
+            'position': 'absolute',
+            'top': '10px',
+            'right': '10px',
+            'zIndex': '1000'
+        }
+        layout_style = {
+            'display': 'flex',
+            'flexDirection': 'column',
+            'alignItems': 'center',
+            'margin': '0',
+            'padding': '0'
+        }
+        row_style = {
+            'display': 'flex',
+            'width': '100%',
+            'margin': '0',
+            'gap': '0'
+        }
+        return html.Div([
+            html.Div([
+                dcc.Graph(id='heatmap', figure=heatmap_fig, style=graph_style),
+                html.Div([
+                    dcc.Graph(id='histogram', figure=go.Figure(), style=graph_style),
+                    html.Div([
+                        dcc.Dropdown(
+                            id='mode-selector',
+                            options=[
+                                {'label': '原始模式', 'value': 'original'},
+                                {'label': 'Coates模式', 'value': 'coates'},
+                                {'label': '对比模式', 'value': 'compare'}
+                            ],
+                            value='original',  # 默认选中原始模式
+                            clearable=False,
+                            style=dropdown_style
+                        )
+                    ], style=dropdown_container_style)
+                ], style={'position': 'relative', 'flex': '1', 'margin': '0'})
+            ], style=row_style)
+        ], style=layout_style)
+    
     def _setup_callbacks(self, app, gate_info, matrix_data, exposure):
         """
         Set up callbacks for the Dash application.
@@ -73,7 +119,6 @@ class HistogramChecker(DataLoader):
             self._apply_layout(fig, data_info, mode, gate_info)
             
             return fig
-
     def _extract_pixel_data(self,click_data, gate_info, matrix_data, exposure):
         x_idx = int(click_data['points'][0]['x'])
         y_idx = int(click_data['points'][0]['y'])
@@ -166,48 +211,4 @@ class HistogramChecker(DataLoader):
         )
 
            
-    def create_app_layout(self,heatmap_fig):
-        graph_style = {'flex': '1', 'margin': '0'}
-        dropdown_style = {
-            'width': '150px'
-        }
-        dropdown_container_style = {
-            'position': 'absolute',
-            'top': '10px',
-            'right': '10px',
-            'zIndex': '1000'
-        }
-        layout_style = {
-            'display': 'flex',
-            'flexDirection': 'column',
-            'alignItems': 'center',
-            'margin': '0',
-            'padding': '0'
-        }
-        row_style = {
-            'display': 'flex',
-            'width': '100%',
-            'margin': '0',
-            'gap': '0'
-        }
-        return html.Div([
-            html.Div([
-                dcc.Graph(id='heatmap', figure=heatmap_fig, style=graph_style),
-                html.Div([
-                    dcc.Graph(id='histogram', figure=go.Figure(), style=graph_style),
-                    html.Div([
-                        dcc.Dropdown(
-                            id='mode-selector',
-                            options=[
-                                {'label': '原始模式', 'value': 'original'},
-                                {'label': 'Coates模式', 'value': 'coates'},
-                                {'label': '对比模式', 'value': 'compare'}
-                            ],
-                            value='original',  # 默认选中原始模式
-                            clearable=False,
-                            style=dropdown_style
-                        )
-                    ], style=dropdown_container_style)
-                ], style={'position': 'relative', 'flex': '1', 'margin': '0'})
-            ], style=row_style)
-        ], style=layout_style)
+
