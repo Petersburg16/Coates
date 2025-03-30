@@ -9,8 +9,8 @@ double_gaussian_params = {
         "bg_strength": 0.01,
         "total_strength": 1,
 }
-DG=sim.DoubleGaussian(double_gaussian_params)
-DG.plot_test()
+simulator =sim.DualGaussian()
+simulator.create_interactive_plot()
 
 
 

@@ -1,4 +1,5 @@
 from .SPADSimulateEngine import SPADSimulateEngine
-from .DoubleGaussian import DoubleGaussian
+from .DualGaussian import DualGaussian
+from .DualGaussianViewer import DualGaussianViewer
 
-__all__ = ['SPADSimulateEngine',  'DoubleGaussian']
+__all__ = ['SPADSimulateEngine',  'DualGaussian', 'DualGaussianViewer']

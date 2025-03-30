@@ -3,6 +3,7 @@ from math import exp
 from scipy.special import log1p
 import numpy as np
 
+
 @dataclass
 class SPADDataContainer:
     """
@@ -28,13 +29,18 @@ class SPADDataContainer:
     ideal_histogram:np.ndarray=None
     spad_histogram:np.ndarray=None
     coates_histogram:np.ndarray=None
+    resolution_factor:int=1
 
     @property
     def spad_histogram_without_overflow(self)->np.ndarray:
         return self.spad_histogram[:-1]
+
     @property
     def gated_flux(self)->np.ndarray:
         return self.flux[self.gate_info[0]:self.gate_info[1]]
+    @property
+    def gated_smooth_flux(self)->np.ndarray:
+        return self.smooth_flux[self.gate_info[0]:self.gate_info[1]*self.resolution_factor]
     @property
     def flux_level(self)->float:
         return np.sum(self.spad_histogram_without_overflow)/self.exposure*100
@@ -54,23 +60,8 @@ class SPADSimulateEngine:
         self.update_coates_estimation()
 
     def generate_flux(self):
-        """
-        生成光通量的示例代码，需要在子类中重载。
-        flux生成的是一个在
-        """
+        raise NotImplementedError("The method generate_flux must be implemented in a subclass.")
 
-        x = np.arange(self._simulate_field)
-        
-        self._singnal_strength = 1.0
-        self._pulse_pos = 50.0
-        self._pulse_width = 3.0
-        self._bg_strength = 0.01
-
-        self._total_strength=1
-
-        pulse = self._singnal_strength * np.exp(-0.5 * ((x - self._pulse_pos) / self._pulse_width)**2)
-        background = self._bg_strength * np.ones(self._simulate_field)
-        self.data.flux=self.normalize_flux(pulse + background)*self._total_strength
 
     def update_ideal_histogram(self):
         self.data.ideal_histogram = self.generate_ideal_histogram(self.data.gated_flux,self.data.exposure)
@@ -84,7 +75,7 @@ class SPADSimulateEngine:
     def plot_test(self)-> None:
         import plotly.graph_objects as go
         fig = go.Figure()
-        # fig.add_trace(go.Scatter(x=np.arange(self.data.gate_length), y=self.data.gated_flux*self.data.exposure, mode='lines', name='Flux'))
+        fig.add_trace(go.Scatter(x=np.arange(self.data.gate_length), y=self.data.gated_flux*self.data.exposure, mode='lines', name='Flux'))
         
         fig.add_trace(go.Bar(x=np.arange(self.data.gate_length), y=self.data.ideal_histogram, name='Ideal Histogram'))
         fig.add_trace(go.Bar(x=np.arange(self.data.gate_length), y=self.data.spad_histogram_without_overflow, name='Simulated Histogram'))
