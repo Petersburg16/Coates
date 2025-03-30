@@ -32,18 +32,35 @@ class SPADDataContainer:
     @property
     def spad_histogram_without_overflow(self)->np.ndarray:
         return self.spad_histogram[:-1]
+    @property
+    def gated_flux(self)->np.ndarray:
+        return self.flux[self.gate_info[0]:self.gate_info[1]]
+    @property
+    def flux_level(self)->float:
+        return np.sum(self.spad_histogram_without_overflow)/self.exposure*100
+    
 
 
 class SPADSimulateEngine:
-    def __init__(self,num_bins:int=100,cycles:int=1000):
-        self._num_bins = num_bins
-        self._cycles = cycles
-        self.spad_data= SPADDataContainer()
+    def __init__(self,gate_info:tuple=(0,100),cycles:int=1000,simulate_field:int=200):
+        self.data= SPADDataContainer()
+        self.data.gate_info = gate_info
+        self.data.exposure = cycles
+        self._simulate_field=simulate_field
 
+        self.generate_flux()
+        self.update_ideal_histogram()
+        self.update_simulated_histogram()
+        self.update_coates_estimation()
 
     def generate_flux(self):
+        """
+        生成光通量的示例代码，需要在子类中重载。
+        flux生成的是一个在
+        """
 
-
+        x = np.arange(self._simulate_field)
+        
         self._singnal_strength = 1.0
         self._pulse_pos = 50.0
         self._pulse_width = 3.0
@@ -51,30 +68,27 @@ class SPADSimulateEngine:
 
         self._total_strength=1
 
-        x = np.arange(self._num_bins)
         pulse = self._singnal_strength * np.exp(-0.5 * ((x - self._pulse_pos) / self._pulse_width)**2)
-        background = self._bg_strength * np.ones(self._num_bins)
-        self.spad_data.flux=self.normalize_flux(pulse + background)*self._total_strength
-
+        background = self._bg_strength * np.ones(self._simulate_field)
+        self.data.flux=self.normalize_flux(pulse + background)*self._total_strength
 
     def update_ideal_histogram(self):
-        self.spad_data.ideal_histogram = self.generate_ideal_histogram(self.spad_data.flux,self._cycles)
+        self.data.ideal_histogram = self.generate_ideal_histogram(self.data.gated_flux,self.data.exposure)
 
     def update_simulated_histogram(self):
-        self.spad_data.spad_histogram = self.SPAD_simulation(self.spad_data.flux,self._cycles)
+        self.data.spad_histogram = self.SPAD_simulation(self.data.gated_flux,self.data.exposure)
 
     def update_coates_estimation(self):
-        self.spad_data.coates_histogram =self.coates_estimator(self.spad_data.spad_histogram,self._cycles)
+        self.data.coates_histogram =self.coates_estimator(self.data.spad_histogram,self.data.exposure)
         
-
-
     def plot_test(self)-> None:
         import plotly.graph_objects as go
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=np.arange(self._num_bins), y=self.spad_data.flux*self._cycles, mode='lines', name='Flux'))
-        fig.add_trace(go.Bar(x=np.arange(self._num_bins), y=self.spad_data.ideal_histogram, name='Ideal Histogram'))
-        fig.add_trace(go.Bar(x=np.arange(self._num_bins), y=self.spad_data.spad_histogram_without_overflow, name='Simulated Histogram'))
-        fig.add_trace(go.Bar(x=np.arange(self._num_bins), y=self.spad_data.coates_histogram, name='Coates Histogram'))
+        # fig.add_trace(go.Scatter(x=np.arange(self.data.gate_length), y=self.data.gated_flux*self.data.exposure, mode='lines', name='Flux'))
+        
+        fig.add_trace(go.Bar(x=np.arange(self.data.gate_length), y=self.data.ideal_histogram, name='Ideal Histogram'))
+        fig.add_trace(go.Bar(x=np.arange(self.data.gate_length), y=self.data.spad_histogram_without_overflow, name='Simulated Histogram'))
+        fig.add_trace(go.Bar(x=np.arange(self.data.gate_length), y=self.data.coates_histogram, name='Coates Histogram'))
         fig.show()
     
 
@@ -121,9 +135,6 @@ class SPADSimulateEngine:
         normalized_histogram = np.round(histogram / np.sum(histogram)*cycles).astype(int)
         return normalized_histogram
     
-
-    
-
 
     @staticmethod 
     def safe_log(x):
@@ -182,10 +193,8 @@ class SPADSimulateEngine:
     
 def test():
     spad_simulator = SPADSimulateEngine()
-    spad_simulator.generate_flux()
-    spad_simulator.update_ideal_histogram()
-    spad_simulator.update_simulated_histogram()
-    spad_simulator.update_coates_estimation()
+
+
     spad_simulator.plot_test()
 
 if __name__ == "__main__":
