@@ -40,7 +40,10 @@ class SPADDataContainer:
         return self.flux[self.gate_info[0]:self.gate_info[1]]
     @property
     def gated_smooth_flux(self)->np.ndarray:
-        return self.smooth_flux[self.gate_info[0]:self.gate_info[1]*self.resolution_factor]
+        # 正确处理分辨率，起始和结束索引都需要乘以分辨率因子
+        start_idx = self.gate_info[0] * self.resolution_factor
+        end_idx = self.gate_info[1] * self.resolution_factor
+        return self.smooth_flux[start_idx:end_idx]
     @property
     def flux_level(self)->float:
         return np.sum(self.spad_histogram_without_overflow)/self.exposure*100
