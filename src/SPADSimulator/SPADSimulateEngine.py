@@ -3,7 +3,7 @@ from math import exp
 from scipy.special import log1p
 import numpy as np
 
-
+from typing import Optional
 @dataclass
 class SPADDataContainer:
     """
@@ -25,11 +25,14 @@ class SPADDataContainer:
 
 
     flux:np.ndarray=None
+    resolution_factor:int=10
     smooth_flux:np.ndarray=None
+
     ideal_histogram:np.ndarray=None
     spad_histogram:np.ndarray=None
     coates_histogram:np.ndarray=None
-    resolution_factor:int=1
+
+    simulate_field:int=200
 
     @property
     def spad_histogram_without_overflow(self)->np.ndarray:
@@ -51,18 +54,42 @@ class SPADDataContainer:
 
 
 class SPADSimulateEngine:
-    def __init__(self,gate_info:tuple=(0,100),cycles:int=1000,simulate_field:int=200):
-        self.data= SPADDataContainer()
+    def __init__(
+        self,
+        gate_info: tuple = (0, 100),
+        cycles: int = 1000,
+        simulate_field: int = 200,
+        flux: Optional[np.ndarray] = None
+    ):
+        """
+        SPADSimulateEngine提供两种调用方式：
+        1.创建SPADSimulateEngine的子类，重载generate_flux方法。
+        2.在实例创建时提供flux向量，并定义gate_info和cycles（对应真实采集时的gate和expourse)
+        """
+        self.data = SPADDataContainer()
         self.data.gate_info = gate_info
         self.data.exposure = cycles
-        self._simulate_field=simulate_field
+        self._simulate_field = simulate_field
 
-        self.generate_flux()
+
+        if flux is not None:
+            # 需要加入gate_info和simulate_field的限制处理
+            # 需要添加对flux长度的检查
+            self.data.flux = flux
+            self.data.simulate_field = len(flux)
+        else:
+            self.generate_flux()
+
+        # 实例创建时自动更新直方图数据
         self.update_ideal_histogram()
         self.update_simulated_histogram()
         self.update_coates_estimation()
 
     def generate_flux(self):
+        """
+        SPADSimulateEngine类不提供生成flux的方法
+        必须在子类中重载或者在创建实例时提供flux
+        """
         raise NotImplementedError("The method generate_flux must be implemented in a subclass.")
 
 
@@ -79,7 +106,6 @@ class SPADSimulateEngine:
         import plotly.graph_objects as go
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=np.arange(self.data.gate_length), y=self.data.gated_flux*self.data.exposure, mode='lines', name='Flux'))
-        
         fig.add_trace(go.Bar(x=np.arange(self.data.gate_length), y=self.data.ideal_histogram, name='Ideal Histogram'))
         fig.add_trace(go.Bar(x=np.arange(self.data.gate_length), y=self.data.spad_histogram_without_overflow, name='Simulated Histogram'))
         fig.add_trace(go.Bar(x=np.arange(self.data.gate_length), y=self.data.coates_histogram, name='Coates Histogram'))
@@ -102,21 +128,28 @@ class SPADSimulateEngine:
     
     
     @staticmethod
-    def SPAD_simulation(flux:np.ndarray,cycles:int)-> np.ndarray:
+    def SPAD_simulation(flux:np.ndarray, cycles:int)-> np.ndarray:
+        # 有别于原始的首光子效应实现，并不是特别直观，这里使用的是多项式分布进行的数学等效
         num_bins = len(flux)
-        histogram = np.zeros(num_bins + 1, dtype=int)  # 最后一个是溢出仓
         detection_probabilities = 1 - np.exp(-flux)
-
-        for _ in range(cycles):
-            detected = False
-            for current_bin in range(num_bins):
-                q_i = detection_probabilities[current_bin]
-                if np.random.rand() < q_i:
-                    histogram[current_bin] += 1
-                    detected = True
-                    break  
-            if not detected:
-                histogram[-1] += 1  
+        
+        # 计算每个bin首次检测的概率
+        not_detected_prob = np.ones(num_bins)
+        for i in range(1, num_bins):
+            not_detected_prob[i] = not_detected_prob[i-1] * (1 - detection_probabilities[i-1])
+        
+        # 每个bin的首次检测概率 = 该bin检测概率 * 之前所有bin都未检测的概率
+        first_detection_probs = detection_probabilities * not_detected_prob
+        
+        # 溢出仓概率 = 所有bin都未检测到的概率
+        overflow_prob = not_detected_prob[-1] * (1 - detection_probabilities[-1])
+        
+        # 构建完整的概率分布并检查概率和是否为1
+        full_probs = np.append(first_detection_probs, overflow_prob)
+        
+        # 直接从多项分布中采样
+        histogram = np.random.multinomial(cycles, full_probs)
+        
         return histogram
     
     @staticmethod
@@ -152,11 +185,6 @@ class SPADSimulateEngine:
         N_i = histogram[:-1].astype(np.longdouble)
         total_counts = np.sum(histogram).astype(np.longdouble)
         
-        """
-        if histogram[-1] == 0:
-            total_counts += 1  # 防止除零错误
-        """
-        
         # 计算分母序列
         cumulative_loss = np.zeros_like(N_i, dtype=np.longdouble)
         denominator = np.zeros_like(N_i, dtype=np.longdouble)
@@ -187,8 +215,6 @@ class SPADSimulateEngine:
     
 def test():
     spad_simulator = SPADSimulateEngine()
-
-
     spad_simulator.plot_test()
 
 if __name__ == "__main__":
